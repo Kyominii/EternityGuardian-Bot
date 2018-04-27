@@ -1,5 +1,6 @@
 const Discord = require('discord.js');
 const countdown = require('countdown')
+const fs = require('fs');
 const bot = new Discord.Client();
 
 countdown.setLabels(
@@ -9,18 +10,101 @@ countdown.setLabels(
 	', ',
 	'maintenant');
 
-let currentPresident = "Garlic Dog#1337"
-let helpTxt = "```===HELP===\nAfficher l'aide : !eter halp\nAfficher le président actuel : !eter prez\nAfficher le compte-à-rebours avant la prochaine election : !eter prochain```"
-let nextElection = new Date(2018, 04, 25, 21)
+let currentPresident = "undefined"
+let helpTxt = "```====================AIDE====================\nAfficher l'aide : !eter aide\nAfficher le président actuel : !eter president\nAfficher le compte-à-rebours avant la prochaine election : !eter prochain\n"
+		helpTxt = helpTxt + "Postuler : !eter postule [TON PROGRAMME (obligatoire)]\nListe des candidats : !eter candidats [ID CANDIDAT (optionnel)]\nVoter (uniquement en message privé) : !eter vote [ID CANDIDAT (obligatoire)]\n"
+		helpTxt = helpTxt + "```"
+let nextElection = new Date(2018, 03, 30, 00, 50, 00)
+let candidate = []
+let voteAck = []
+let endVote = new Date()
+let isVoting = false
 
-let greetingElections = () => {
+let announce = (txt) => {
   bot.channels.every((channel) => {
     if(channel.type === "text"){
-      channel.send("**/!\\ATTENTION/!\\**\nLes élections mensuelles vont débuter dans 5 minutes !!!")
+			channel.send("**/!\\ATTENTION/!\\**\n" + txt)
       .catch(console.error)
     }
     return true
   })
+}
+
+let addCandidate = (user, desc) => {
+	candidate.push({
+		'user': user,
+		'desc': desc,
+		'votes': 0
+	 })
+}
+
+let checkIfAlreadyRegistered = (user) => {
+	let code = false
+	candidate.forEach((el) => {
+		if(el.user.id == user.id){
+			code = true
+		}
+	})
+	return code
+}
+
+let checkIfAlreadyVoted = (user) => {
+	let code = false
+	voteAck.forEach((el) => {
+		if(el == user.id){
+			code = true
+		}
+	})
+	return code
+}
+
+let voteTimeout = () => {
+	if(candidate.length > 0) {
+		if(voteAck.length > 0){
+			let bestIndex = 0
+			candidate.forEach((el, index) => {
+				if(candidate[bestIndex].votes < el.votes) {
+					bestIndex = index
+				}
+			})
+
+			let winner = candidate[bestIndex].user
+			let prog = candidate[bestIndex].desc
+			let perc = (candidate[bestIndex].votes / voteAck.length) * 100
+
+			announce("Les élections mensuelles sont terminées !!!\nNotre nouveau président : <@" + winner.id + "> avec " + perc + "% des voix\nPour rappel, son programme : ```" + prog + "```")
+			currentPresident = winner.username
+		} else {
+			announce("Les élections mensuelles sont terminées !!!\nIl n'y a pas eu assez de votant, les élections sont donc repoussé au mois prochain !")
+		}
+
+	} else {
+		announce("Les élections mensuelles sont terminées !!!\nIl n'y a pas eu assez de candidature, les élections sont donc repoussé au mois prochain !")
+	}
+}
+
+let tick = () => {
+	let currentDate = new Date()
+	let timeLeft = Math.floor((nextElection.getTime() - currentDate.getTime())/1000)
+	if(timeLeft < 0){
+
+			announce("Les élections mensuelles commencent !")
+			endVote = new Date()
+			endVote.setDate(endVote.getDate() + 1)
+			nextElection.setMonth(nextElection.getMonth() + 1)
+			isVoting = true
+
+			setTimeout(() => {
+				voteTimeout()
+				isVoting = false
+				candidate = []
+				voteAck = []
+			}, 10000)
+		}
+
+	setTimeout(() => {
+		tick()
+	}, 1000)
 }
 
 bot.on('ready', function () {
@@ -32,7 +116,8 @@ bot.on('ready', function () {
         }
     })
     .then(() => {
-      console.log("Eternity Guardian prêt à bosser !")
+			tick()
+      console.log("Loop Started ... Eternity Guardian ready !")
     })
     .catch(console.error);
 });
@@ -44,24 +129,100 @@ bot.on('message', (message) => {
       if (/^!eter\s/.test(message.content)) {
         let plain_args = message.content.replace('!eter ', '')
         let args = plain_args.split(' ')
+				let cmd = args.shift()
 
-        switch (args[0]) {
-          case "prez":
-            message.reply('Le président actuel est : ' + currentPresident)
+        switch (cmd) {
+          case "president":
+						if(currentPresident === "undefined"){
+							message.reply('Il n\'y a aucun président dans cette éternité !')
+						} else {
+							message.reply('Le président actuel est : ' + currentPresident)
+						}
             break;
-          case "halp":
+          case "aide":
             message.reply(helpTxt)
             break;
           case "prochain":
-            message.reply('Il reste : ' + countdown(nextElection).toString() + ' avant la prochaine élection')
+						if(isVoting){
+	            message.reply('Il reste : ' + countdown(null, endVote).toString() + ' avant la fin du vote !')
+						} else {
+	            message.reply('Il reste : ' + countdown(null, nextElection).toString() + ' avant la prochaine élection')
+						}
             break;
-          case "test":
-            greetingElections()
+          case "postule":
+						if(isVoting){
+							message.reply('Les postulations sont actuellement fermées (vote en cours) !')
+						} else {
+							if(!checkIfAlreadyRegistered(message.author)){
+								let prog = args.join(' ')
+								if(prog !== ""){
+									addCandidate(message.author, prog)
+									message.channel.send('La candidature de <@' + message.author.id + '> a été prise en compte. Son programme : ' + prog)
+								} else {
+									message.reply('Tu dois donner ton programme !')
+								}
+							} else {
+								message.reply('Tu participes déjà à cette élection !')
+							}
+						}
             break;
+					case "candidats":
+						let response = ""
+						if (args[0]){
+							let el = candidate[args[0]]
+							if(el){
+								response = response + el.user.tag + " : ```\n" + el.desc + "\n```"
+							} else {
+								response = response + "Ce candidat n'existe pas !"
+							}
+						} else {
+							if(candidate.length === 0){
+								response = "Aucun candidat pour le moment !"
+							} else {
+								candidate.forEach((el, index) => {
+									response = response + "\n" + index + " : " + el.user.tag
+								})
+							}
+
+						}
+						message.channel.send(response)
+						break;
+					case "vote":
+						if(!isVoting){
+							message.reply('Aucun vote n\'est en cours')
+						} else {
+							if(message.channel.type !== "dm"){
+								message.reply('Les votes se font en message privé **UNIQUEMENT**')
+								message.author.send("Merci de voter ici !")
+							} else {
+								if(!args[0]){
+									message.reply('Tu dois donner l\'ID du participant pour qui tu votes (voir !eter candidats)')
+								} else {
+									if(checkIfAlreadyVoted(message.author)){
+										message.reply('Tu as déjà voté !')
+									} else {
+										if(!candidate[args[0]]){
+											message.reply('Ce candidat n\'existe pas !')
+										} else {
+											candidate[args[0]].votes++
+											voteAck.push(message.author.id)
+											message.reply('À voté : ' + candidate[args[0]].user.tag + " ! ")
+										}
+									}
+								}
+							}
+						}
+						break;
+					case 'test':
+						nextElection = new Date()
+						break;
           default:
             message.reply('Je n\'ai pas compris, veuillez reformuler s\'il vous plaît !')
         }
-        //if(message.channel.type === "dm"){
       }
     }
+});
+
+process.on('uncaughtException', function (err) {
+  console.log('Caught exception: ' + err);
 });

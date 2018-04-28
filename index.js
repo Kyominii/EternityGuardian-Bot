@@ -241,7 +241,7 @@
 													} else {
 														candidate[args[0]].votes++
 														voteAck.push(message.author.id)
-														message.reply('À voté : ' + candidate[args[0]].user.tag + " ! ")
+														message.reply('A voté : ' + candidate[args[0]].user.tag + " ! ")
 													}
 												}
 											}

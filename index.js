@@ -2,15 +2,22 @@ const Discord = require('discord.js');
 const countdown = require('countdown')
 const fs = require('fs');
 const stringify = require('json-stringify-safe')
-const bot = new Discord.Client();
+const cluster = require('cluster');
 
-countdown.setLabels(
-	' milliseconde| seconde| minute| heure| jour| semaine| mois| année| décennie| siècle| millénaire',
-	' millisecondes| secondes| minutes| heures| jours| semaines| mois| années| décennies| siècles| millénaires',
-	' et ',
-	', ',
-	'maintenant');
+countdown.setLabels(' milliseconde| seconde| minute| heure| jour| semaine| mois| année| décennie| siècle| millénaire', ' millisecondes| secondes| minutes| heures| jours| semaines| mois| années| décennies| siècles| millénaires', ' et ', ', ', 'maintenant');
 
+
+if(cluster.isMaster) {
+
+	cluster.fork();
+	cluster.on('disconnect', function(worker)
+   {
+       console.error('Crashed !');
+       cluster.fork();
+   });
+
+} else {
+	const bot = new Discord.Client();
 
 	let helpTxt = "```====================AIDE====================\nAfficher l'aide : !eter aide\nAfficher le président actuel : !eter president\nAfficher le compte-à-rebours avant la prochaine election : !eter prochain\n"
 	helpTxt = helpTxt + "Postuler : !eter postule [TON PROGRAMME (obligatoire)]\nListe des candidats : !eter candidats [ID CANDIDAT (optionnel)]\nVoter (uniquement en message privé) : !eter vote [ID CANDIDAT (obligatoire)]\n"
@@ -282,6 +289,7 @@ countdown.setLabels(
 						}
 						message.channel.send(response)
 						break;
+
 						case "vote":
 						if(!isVoting){
 							message.reply('Aucun vote n\'est en cours')
@@ -308,6 +316,7 @@ countdown.setLabels(
 							}
 						}
 						break;
+
 						case 'toggle':
 						if (message.author.id === techID){
 							maintenance = true
@@ -317,6 +326,7 @@ countdown.setLabels(
 							message.reply("Vous n'êtes pas autorisé à utiliser cette fonctionnalité !")
 						}
 						break;
+
 						case 'remove':
 						if (message.author.id === techID){
 							if (args[0]){
@@ -332,6 +342,7 @@ countdown.setLabels(
 							message.reply("Vous n'êtes pas autorisé à utiliser cette fonctionnalité !")
 						}
 						break;
+
 						case 'test':
 						if (message.author.id === techID){
 							nextElection = new Date()
@@ -339,6 +350,7 @@ countdown.setLabels(
 							message.reply("Vous n'êtes pas autorisé à utiliser cette fonctionnalité !")
 						}
 						break;
+
 						default:
 						message.reply('Je n\'ai pas compris, veuillez reformuler s\'il vous plaît !')
 					}
@@ -349,5 +361,8 @@ countdown.setLabels(
 	});
 
 	process.on('uncaughtException', function (err) {
-		console.log('Caught exception: ' + err);
+		console.log('Caught exception: ' + stringify(err));
+		process.exit(1);
 	});
+
+}

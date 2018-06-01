@@ -35,8 +35,8 @@ if(cluster.isMaster) {
 
 	//TECH CONFIG
 	let techID = '145122601105227777'
-	let guildID = '372455299803774976'
-	let presidentRoleName = 'Président'
+	let guildID = '307260668388573186'
+	let presidentRoleName = 'Président acclamé par la foule en liesse'
 
 	let save = () => {
 		let obj = {

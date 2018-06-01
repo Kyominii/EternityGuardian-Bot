@@ -307,9 +307,13 @@ if(cluster.isMaster) {
 										if(!candidate[args[0]]){
 											message.reply('Ce candidat n\'existe pas !')
 										} else {
-											candidate[args[0]].votes++
-											voteAck.push(message.author.id)
-											message.reply('A voté : ' + candidate[args[0]].user.tag + " ! ")
+											if(message.author.id === candidate[args[0]].user.id){
+												message.reply('Vous ne pouvez pas voter pour vous-même !')
+											} else {
+												candidate[args[0]].votes++
+												voteAck.push(message.author.id)
+												message.reply('A voté : ' + candidate[args[0]].user.tag + " ! ")
+											}
 										}
 									}
 								}

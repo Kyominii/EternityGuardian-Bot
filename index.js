@@ -37,6 +37,7 @@ if(cluster.isMaster) {
 	let techID = '145122601105227777'
 	let guildID = '307260668388573186'
 	let presidentRoleName = 'Président acclamé par la foule en liesse'
+	let channelAnnouncement = '307807367071006721'
 
 	let save = () => {
 		let obj = {
@@ -73,7 +74,7 @@ if(cluster.isMaster) {
 
 	let announce = (txt) => {
 		bot.channels.every((channel) => {
-			if(channel.type === "text"){
+			if(channel.id === channelAnnouncement){
 				channel.send("**/!\\ATTENTION/!\\**\n" + txt)
 				.catch(console.error)
 			}
@@ -347,7 +348,18 @@ if(cluster.isMaster) {
 						}
 						break;
 
-						case 'test':
+						case 'forceVoteTO':
+						if (message.author.id === techID){
+							voteTimeout()
+							isVoting = false
+							candidate = []
+							voteAck = []
+						} else {
+							message.reply("Vous n'êtes pas autorisé à utiliser cette fonctionnalité !")
+						}
+						break;
+
+						case 'forceElectionTO':
 						if (message.author.id === techID){
 							nextElection = new Date()
 						} else {
